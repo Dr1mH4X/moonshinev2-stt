@@ -29,8 +29,7 @@ class MoonshineRecognizer:
 
         self._recognizer = self._build_recognizer()
         logger.info(
-            "MoonshineRecognizer loaded: encoder=%s decoder=%s tokens=%s "
-            "threads=%d",
+            "MoonshineRecognizer loaded: encoder=%s decoder=%s tokens=%s threads=%d",
             self._encoder_path,
             self._decoder_path,
             self._tokens_path,
@@ -44,9 +43,7 @@ class MoonshineRecognizer:
         matches = list(self.model_path.rglob(name))
         if matches:
             return str(matches[0])
-        raise FileNotFoundError(
-            f"Model file '{name}' not found under {self.model_path}"
-        )
+        raise FileNotFoundError(f"Model file '{name}' not found under {self.model_path}")
 
     def _build_recognizer(self) -> sherpa_onnx.OfflineRecognizer:
         return sherpa_onnx.OfflineRecognizer.from_moonshine_v2(

@@ -26,9 +26,7 @@ SUPPORTED_FORMATS = {
 }
 
 
-def convert_to_wav_bytes(
-    audio_bytes: bytes, filename: str = ""
-) -> tuple[np.ndarray, int]:
+def convert_to_wav_bytes(audio_bytes: bytes, filename: str = "") -> tuple[np.ndarray, int]:
     """Convert any audio format to mono float32 PCM using ffmpeg."""
     ext = Path(filename).suffix.lower() if filename else ""
     if ext == ".wav" or ext == "":

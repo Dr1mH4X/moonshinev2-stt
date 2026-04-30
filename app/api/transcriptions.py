@@ -32,22 +32,16 @@ async def transcribe_audio(
         raise HTTPException(status_code=400, detail="Empty audio file")
 
     try:
-        audio_data, sample_rate = convert_to_wav_bytes(
-            audio_bytes, filename=file.filename or ""
-        )
+        audio_data, sample_rate = convert_to_wav_bytes(audio_bytes, filename=file.filename or "")
     except Exception as e:
         logger.error("Audio decode error: %s", e)
-        raise HTTPException(
-            status_code=400, detail=f"Failed to decode audio: {e}"
-        ) from e
+        raise HTTPException(status_code=400, detail=f"Failed to decode audio: {e}") from e
 
     recognizer = get_recognizer()
 
     if stream:
         return StreamingResponse(
-            _stream_transcription(
-                recognizer, audio_data, sample_rate, response_format
-            ),
+            _stream_transcription(recognizer, audio_data, sample_rate, response_format),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
@@ -107,13 +101,9 @@ def _stream_transcription(
         if text:
             delta = text[len(accumulated_text) :]
             if delta:
-                event = json.dumps(
-                    {"type": "transcript.text.delta", "delta": delta}
-                )
+                event = json.dumps({"type": "transcript.text.delta", "delta": delta})
                 yield f"data: {event}\n\n"
                 accumulated_text = text
 
-    final_event = json.dumps(
-        {"type": "transcript.text.done", "text": accumulated_text}
-    )
+    final_event = json.dumps({"type": "transcript.text.done", "text": accumulated_text})
     yield f"data: {final_event}\n\n"

@@ -65,9 +65,7 @@ async def websocket_stream(websocket: WebSocket) -> None:
     except Exception as e:
         logger.error("WebSocket error: %s", e)
         try:
-            await websocket.send_json(
-                {"type": "error", "message": str(e)}
-            )
+            await websocket.send_json({"type": "error", "message": str(e)})
         except Exception:
             pass
     finally:
