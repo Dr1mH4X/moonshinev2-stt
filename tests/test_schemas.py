@@ -46,7 +46,8 @@ def test_transcribe_returns_text():
     mock_stream.result.text = "  hello world  "
     mock_recognizer_obj = MagicMock()
     mock_recognizer_obj.create_stream.return_value = mock_stream
-    sys.modules["sherpa_onnx"].OfflineRecognizer.from_moonshine_v2.return_value = mock_recognizer_obj
+    sherpa = sys.modules["sherpa_onnx"]
+    sherpa.OfflineRecognizer.from_moonshine_v2.return_value = mock_recognizer_obj
 
     recognizer = MoonshineRecognizer(model_path="/tmp/models")
     result = recognizer.transcribe(np.zeros(16000, dtype=np.float32), 16000)
@@ -60,7 +61,8 @@ def test_transcribe_2d_audio():
     mock_stream.result.text = "stereo test"
     mock_recognizer_obj = MagicMock()
     mock_recognizer_obj.create_stream.return_value = mock_stream
-    sys.modules["sherpa_onnx"].OfflineRecognizer.from_moonshine_v2.return_value = mock_recognizer_obj
+    sherpa = sys.modules["sherpa_onnx"]
+    sherpa.OfflineRecognizer.from_moonshine_v2.return_value = mock_recognizer_obj
 
     recognizer = MoonshineRecognizer(model_path="/tmp/models")
     stereo = np.zeros((16000, 2), dtype=np.float32)
