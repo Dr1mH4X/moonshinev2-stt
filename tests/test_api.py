@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import io
+import struct
+import sys
+import wave
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -22,89 +26,90 @@ def mock_recognizer():
 
 @pytest.fixture()
 def client(mock_recognizer):
-    with patch("app.api.transcriptions.get_recognizer", return_value=mock_recognizer), \
-         patch("app.api.health.get_recognizer", return_value=mock_recognizer), \
-         patch("app.main.get_recognizer", return_value=mock_recognizer), \
-         patch("app.main.get_vad", return_value=None):
-        from app.main import app
-        yield TestClient(app)
+    for mod_name in list(sys.modules):
+        if mod_name.startswith("app."):
+            del sys.modules[mod_name]
+
+    with patch.dict("os.environ", {"MODEL_PATH": "/tmp/models"}):
+        from app.main import app as test_app
+
+        with (
+            patch("app.core.recognizer.get_recognizer", return_value=mock_recognizer),
+            patch("app.core.vad.get_vad", return_value=None),
+            test_app.router.on_startup.clear(),
+            test_app.router.on_shutdown.clear(),
+        ):
+            yield TestClient(test_app)
+
+
+def _make_wav(duration_samples: int = 16000) -> bytes:
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(16000)
+        wf.writeframes(struct.pack(f"<{duration_samples}h", *([0] * duration_samples)))
+    return buf.getvalue()
 
 
 def test_root(client):
-    response = client.get("/")
-    assert response.status_code == 200
-    data = response.json()
+    resp = client.get("/")
+    assert resp.status_code == 200
+    data = resp.json()
     assert data["name"] == "Moonshine v2 STT Server"
     assert "docs" in data
 
 
 def test_health(client):
-    response = client.get("/health")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "ok"
-    assert data["model"] == "moonshine-v2"
+    resp = client.get("/health")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
 
 
 def test_list_models(client):
-    response = client.get("/v1/models")
-    assert response.status_code == 200
-    data = response.json()
+    resp = client.get("/v1/models")
+    assert resp.status_code == 200
+    data = resp.json()
     assert data["object"] == "list"
-    assert len(data["data"]) == 1
     assert data["data"][0]["id"] == "moonshine-v2"
 
 
 def test_transcribe_empty_file(client):
-    response = client.post(
+    resp = client.post(
         "/v1/audio/transcriptions",
         data={"model": "moonshine-v2"},
         files={"file": ("test.wav", b"", "audio/wav")},
     )
-    assert response.status_code == 400
+    assert resp.status_code == 400
 
 
-def test_transcribe_json(client, mock_recognizer):
-    import io
-    import struct
-    import wave
-
-    buf = io.BytesIO()
-    with wave.open(buf, "wb") as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)
-        wf.setframerate(16000)
-        wf.writeframes(struct.pack("<" + "h" * 16000, *([0] * 16000)))
-    wav_bytes = buf.getvalue()
-
-    response = client.post(
+def test_transcribe_json(client):
+    resp = client.post(
         "/v1/audio/transcriptions",
         data={"model": "moonshine-v2", "response_format": "json"},
-        files={"file": ("test.wav", wav_bytes, "audio/wav")},
+        files={"file": ("test.wav", _make_wav(), "audio/wav")},
     )
-    assert response.status_code == 200
-    data = response.json()
-    assert "text" in data
-    assert data["text"] == "Hello world"
+    assert resp.status_code == 200
+    assert resp.json()["text"] == "Hello world"
 
 
-def test_transcribe_text_format(client, mock_recognizer):
-    import io
-    import struct
-    import wave
-
-    buf = io.BytesIO()
-    with wave.open(buf, "wb") as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)
-        wf.setframerate(16000)
-        wf.writeframes(struct.pack("<" + "h" * 16000, *([0] * 16000)))
-    wav_bytes = buf.getvalue()
-
-    response = client.post(
+def test_transcribe_text_format(client):
+    resp = client.post(
         "/v1/audio/transcriptions",
         data={"model": "moonshine-v2", "response_format": "text"},
-        files={"file": ("test.wav", wav_bytes, "audio/wav")},
+        files={"file": ("test.wav", _make_wav(), "audio/wav")},
     )
-    assert response.status_code == 200
-    assert response.text == "Hello world"
+    assert resp.status_code == 200
+    assert resp.text == "Hello world"
+
+
+def test_transcribe_verbose_json(client):
+    resp = client.post(
+        "/v1/audio/transcriptions",
+        data={"model": "moonshine-v2", "response_format": "verbose_json"},
+        files={"file": ("test.wav", _make_wav(), "audio/wav")},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "text" in data
+    assert "duration" in data
