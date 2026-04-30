@@ -9,10 +9,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response, StreamingResponse
 
 from app.core.recognizer import get_recognizer
-from app.schemas.responses import (
-    TranscriptionResponse,
-    TranscriptionVerboseResponse,
-)
+from app.schemas.responses import TranscriptionResponse, TranscriptionVerboseResponse
 from app.utils.audio import convert_to_wav_bytes, format_srt, format_vtt
 
 logger = logging.getLogger(__name__)
@@ -48,7 +45,9 @@ async def transcribe_audio(
 
     if stream:
         return StreamingResponse(
-            _stream_transcription(recognizer, audio_data, sample_rate, response_format),
+            _stream_transcription(
+                recognizer, audio_data, sample_rate, response_format
+            ),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
@@ -106,11 +105,15 @@ def _stream_transcription(
 
         text = recognizer.transcribe(chunk, sample_rate)
         if text:
-            delta = text[len(accumulated_text):]
+            delta = text[len(accumulated_text) :]
             if delta:
-                event = json.dumps({"type": "transcript.text.delta", "delta": delta})
+                event = json.dumps(
+                    {"type": "transcript.text.delta", "delta": delta}
+                )
                 yield f"data: {event}\n\n"
                 accumulated_text = text
 
-    final_event = json.dumps({"type": "transcript.text.done", "text": accumulated_text})
+    final_event = json.dumps(
+        {"type": "transcript.text.done", "text": accumulated_text}
+    )
     yield f"data: {final_event}\n\n"

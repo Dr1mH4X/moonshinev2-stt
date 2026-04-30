@@ -33,11 +33,15 @@ def client(mock_recognizer):
     with patch.dict("os.environ", {"MODEL_PATH": "/tmp/models"}):
         from app.main import app as test_app
 
+        test_app.router.on_startup.clear()
+        test_app.router.on_shutdown.clear()
+
         with (
-            patch("app.core.recognizer.get_recognizer", return_value=mock_recognizer),
+            patch(
+                "app.core.recognizer.get_recognizer",
+                return_value=mock_recognizer,
+            ),
             patch("app.core.vad.get_vad", return_value=None),
-            test_app.router.on_startup.clear(),
-            test_app.router.on_shutdown.clear(),
         ):
             yield TestClient(test_app)
 
@@ -48,7 +52,9 @@ def _make_wav(duration_samples: int = 16000) -> bytes:
         wf.setnchannels(1)
         wf.setsampwidth(2)
         wf.setframerate(16000)
-        wf.writeframes(struct.pack(f"<{duration_samples}h", *([0] * duration_samples)))
+        wf.writeframes(
+            struct.pack(f"<{duration_samples}h", *([0] * duration_samples))
+        )
     return buf.getvalue()
 
 

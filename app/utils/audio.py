@@ -11,12 +11,24 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 SUPPORTED_FORMATS = {
-    ".wav", ".mp3", ".flac", ".ogg", ".m4a", ".mp4",
-    ".mpeg", ".mpga", ".webm", ".opus", ".aac", ".wma",
+    ".wav",
+    ".mp3",
+    ".flac",
+    ".ogg",
+    ".m4a",
+    ".mp4",
+    ".mpeg",
+    ".mpga",
+    ".webm",
+    ".opus",
+    ".aac",
+    ".wma",
 }
 
 
-def convert_to_wav_bytes(audio_bytes: bytes, filename: str = "") -> tuple[np.ndarray, int]:
+def convert_to_wav_bytes(
+    audio_bytes: bytes, filename: str = ""
+) -> tuple[np.ndarray, int]:
     """Convert any audio format to mono float32 PCM using ffmpeg."""
     ext = Path(filename).suffix.lower() if filename else ""
     if ext == ".wav" or ext == "":
@@ -27,6 +39,7 @@ def convert_to_wav_bytes(audio_bytes: bytes, filename: str = "") -> tuple[np.nda
 def _decode_wav_bytes(audio_bytes: bytes) -> tuple[np.ndarray, int]:
     try:
         import soundfile as sf
+
         audio, sr = sf.read(io.BytesIO(audio_bytes), dtype="float32", always_2d=True)
         if audio.shape[1] > 1:
             audio = audio[:, 0]
@@ -44,9 +57,18 @@ def _decode_with_ffmpeg(audio_bytes: bytes) -> tuple[np.ndarray, int]:
     try:
         subprocess.run(
             [
-                "ffmpeg", "-y", "-i", input_path,
-                "-ac", "1", "-ar", "16000",
-                "-f", "wav", "-acodec", "pcm_s16le",
+                "ffmpeg",
+                "-y",
+                "-i",
+                input_path,
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                "-f",
+                "wav",
+                "-acodec",
+                "pcm_s16le",
                 output_path,
             ],
             capture_output=True,
@@ -54,6 +76,7 @@ def _decode_with_ffmpeg(audio_bytes: bytes) -> tuple[np.ndarray, int]:
             timeout=30,
         )
         import soundfile as sf
+
         audio, sr = sf.read(output_path, dtype="float32", always_2d=True)
         if audio.shape[1] > 1:
             audio = audio[:, 0]

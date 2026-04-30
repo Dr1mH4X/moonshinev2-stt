@@ -53,7 +53,8 @@ class VADManager:
             return str(matches[0])
         raise FileNotFoundError(
             f"silero_vad.onnx not found under {self.model_path}. "
-            "Download from: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"
+            "Download from: https://github.com/k2-fsa/sherpa-onnx/"
+            "releases/download/asr-models/silero_vad.onnx"
         )
 
     def process_chunk(self, samples: np.ndarray) -> list[np.ndarray]:

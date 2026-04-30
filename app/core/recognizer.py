@@ -29,7 +29,8 @@ class MoonshineRecognizer:
 
         self._recognizer = self._build_recognizer()
         logger.info(
-            "MoonshineRecognizer loaded: encoder=%s decoder=%s tokens=%s threads=%d",
+            "MoonshineRecognizer loaded: encoder=%s decoder=%s tokens=%s "
+            "threads=%d",
             self._encoder_path,
             self._decoder_path,
             self._tokens_path,

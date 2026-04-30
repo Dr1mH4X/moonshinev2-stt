@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 
@@ -35,8 +35,13 @@ def test_model_list_response():
 def test_recognizer_init():
     from app.core.recognizer import MoonshineRecognizer
 
-    recognizer = MoonshineRecognizer(model_path="/tmp/models", num_threads=2)
-    assert recognizer is not None
+    with patch.object(
+        MoonshineRecognizer, "_resolve_file", return_value="/tmp/fake"
+    ):
+        recognizer = MoonshineRecognizer(
+            model_path="/tmp/models", num_threads=2
+        )
+        assert recognizer is not None
 
 
 def test_transcribe_returns_text():
@@ -47,11 +52,18 @@ def test_transcribe_returns_text():
     mock_recognizer_obj = MagicMock()
     mock_recognizer_obj.create_stream.return_value = mock_stream
     sherpa = sys.modules["sherpa_onnx"]
-    sherpa.OfflineRecognizer.from_moonshine_v2.return_value = mock_recognizer_obj
+    sherpa.OfflineRecognizer.from_moonshine_v2.return_value = (
+        mock_recognizer_obj
+    )
 
-    recognizer = MoonshineRecognizer(model_path="/tmp/models")
-    result = recognizer.transcribe(np.zeros(16000, dtype=np.float32), 16000)
-    assert result == "hello world"
+    with patch.object(
+        MoonshineRecognizer, "_resolve_file", return_value="/tmp/fake"
+    ):
+        recognizer = MoonshineRecognizer(model_path="/tmp/models")
+        result = recognizer.transcribe(
+            np.zeros(16000, dtype=np.float32), 16000
+        )
+        assert result == "hello world"
 
 
 def test_transcribe_2d_audio():
@@ -62,12 +74,17 @@ def test_transcribe_2d_audio():
     mock_recognizer_obj = MagicMock()
     mock_recognizer_obj.create_stream.return_value = mock_stream
     sherpa = sys.modules["sherpa_onnx"]
-    sherpa.OfflineRecognizer.from_moonshine_v2.return_value = mock_recognizer_obj
+    sherpa.OfflineRecognizer.from_moonshine_v2.return_value = (
+        mock_recognizer_obj
+    )
 
-    recognizer = MoonshineRecognizer(model_path="/tmp/models")
-    stereo = np.zeros((16000, 2), dtype=np.float32)
-    result = recognizer.transcribe(stereo, 16000)
-    assert result == "stereo test"
+    with patch.object(
+        MoonshineRecognizer, "_resolve_file", return_value="/tmp/fake"
+    ):
+        recognizer = MoonshineRecognizer(model_path="/tmp/models")
+        stereo = np.zeros((16000, 2), dtype=np.float32)
+        result = recognizer.transcribe(stereo, 16000)
+        assert result == "stereo test"
 
 
 def test_stream_delta_event():

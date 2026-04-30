@@ -17,13 +17,18 @@ async def websocket_stream(websocket: WebSocket) -> None:
     vad = get_vad()
     if vad is None:
         await websocket.accept()
-        await websocket.send_json({
-            "type": "error",
-            "message": (
-                "WebSocket streaming requires silero_vad.onnx in the model directory. "
-                "Download from: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"
-            ),
-        })
+        await websocket.send_json(
+            {
+                "type": "error",
+                "message": (
+                    "WebSocket streaming requires silero_vad.onnx "
+                    "in the model directory. "
+                    "Download from: "
+                    "https://github.com/k2-fsa/sherpa-onnx/releases/"
+                    "download/asr-models/silero_vad.onnx"
+                ),
+            }
+        )
         await websocket.close()
         return
 
@@ -42,21 +47,27 @@ async def websocket_stream(websocket: WebSocket) -> None:
                     continue
                 text = recognizer.transcribe(segment, 16000)
                 if text:
-                    await websocket.send_json({
-                        "type": "transcript.text.delta",
-                        "delta": text,
-                    })
-                    await websocket.send_json({
-                        "type": "transcript.text.done",
-                        "text": text,
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "transcript.text.delta",
+                            "delta": text,
+                        }
+                    )
+                    await websocket.send_json(
+                        {
+                            "type": "transcript.text.done",
+                            "text": text,
+                        }
+                    )
 
     except WebSocketDisconnect:
         logger.info("WebSocket client disconnected")
     except Exception as e:
         logger.error("WebSocket error: %s", e)
         try:
-            await websocket.send_json({"type": "error", "message": str(e)})
+            await websocket.send_json(
+                {"type": "error", "message": str(e)}
+            )
         except Exception:
             pass
     finally:
