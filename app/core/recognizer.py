@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from pathlib import Path
 
 import numpy as np
 import sherpa_onnx
 
 logger = logging.getLogger(__name__)
+
+_CJK_SPACE_RE = re.compile(r"(?<=[\u4e00-\u9fff\u3400-\u4dbf])\s+(?=[\u4e00-\u9fff\u3400-\u4dbf])")
 
 
 class MoonshineRecognizer:
@@ -65,7 +68,7 @@ class MoonshineRecognizer:
         stream = self._recognizer.create_stream()
         stream.accept_waveform(sample_rate, audio)
         self._recognizer.decode_stream(stream)
-        return stream.result.text.strip()
+        return _CJK_SPACE_RE.sub("", stream.result.text).strip()
 
     def transcribe_with_timestamps(
         self,
