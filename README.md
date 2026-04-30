@@ -1,16 +1,44 @@
 # Moonshine v2 STT Server
 
+[![Build](https://github.com/Dr1mH4X/moonshinev2-stt/actions/workflows/build.yml/badge.svg)](https://github.com/Dr1mH4X/moonshinev2-stt/actions/workflows/build.yml)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/Dr1mH4X/moonshinev2-stt/releases)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 OpenAI-compatible Speech-to-Text API server powered by [Moonshine v2](https://github.com/moonshine-ai/moonshine) models via [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx).
 
 ## Features
 
 - **OpenAI Compatible** — Drop-in replacement for `/v1/audio/transcriptions`
-- **WebSocket Streaming** — Real-time transcription via `/v1/audio/stream`
+- **WebSocket Streaming** — Real-time transcription via `/v1/audio/stream` with VAD
 - **SSE Streaming** — Server-Sent Events with `stream=true`
-- **Multi-format** — wav, mp3, flac, ogg, webm, m4a, and more
+- **Multi-format** — wav, mp3, flac, ogg, webm, m4a, opus, aac, wma
 - **Multi-language** — en, zh, ja, ko, ar, es, uk, vi
+- **CJK Optimization** — Automatic space normalization for Chinese/Japanese/Korean output
 - **Docker Ready** — Single container, mount models as volume
 - **CPU Only** — No GPU required
+
+## Architecture
+
+```
+moonshinev2-stt/
+├── app/
+│   ├── main.py              # FastAPI application entry
+│   ├── api/
+│   │   ├── transcriptions.py # REST API endpoints
+│   │   ├── stream.py         # WebSocket streaming
+│   │   └── health.py         # Health check & model listing
+│   ├── core/
+│   │   ├── recognizer.py     # Moonshine v2 inference wrapper
+│   │   └── vad.py            # Silero VAD for voice detection
+│   ├── schemas/
+│   │   └── responses.py      # Pydantic response models
+│   └── utils/
+│       └── audio.py          # Audio format conversion (ffmpeg)
+├── Dockerfile
+├── docker-compose.yml
+├── pyproject.toml
+└── requirements.txt
+```
 
 ## Supported Models
 
@@ -97,7 +125,7 @@ OpenAI-compatible transcription endpoint.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `file` | File | Yes | — | Audio file |
+| `file` | File | Yes | — | Audio file (wav, mp3, flac, ogg, webm, m4a, etc.) |
 | `model` | string | Yes | — | Model name |
 | `language` | string | No | null | ISO-639-1 code |
 | `response_format` | string | No | `json` | `json`, `text`, `verbose_json`, `srt`, `vtt` |
@@ -134,7 +162,9 @@ data: {"type": "transcript.text.done", "text": "Hello world"}
 
 ### WS /v1/audio/stream
 
-WebSocket endpoint for real-time streaming transcription.
+WebSocket endpoint for real-time streaming transcription with VAD.
+
+**Requirements:** `silero_vad.onnx` must be present in the model directory.
 
 **Protocol:**
 
@@ -212,18 +242,35 @@ print(transcript.text)
 ## Development
 
 ```bash
+# Install dependencies
 pip install -r requirements.txt
-pip install pytest pytest-asyncio httpx ruff
+
+# Install dev tools
+pip install ruff
 
 # Run server
 uvicorn app.main:app --reload --port 8000
 
-# Run tests
-pytest tests/ -v
-
 # Lint
-ruff check app/ tests/
+ruff check app/
+
+# Format check
+ruff format --check app/
 ```
+
+## CI/CD
+
+GitHub Actions workflow (`.github/workflows/build.yml`):
+
+1. **Lint** — Ruff check + format on every push/PR
+2. **Docker** — Build and push to GHCR on push to `main` or `v*` tags
+3. **Release** — Create GitHub Release on `v*` tag push
+
+Docker images are published to `ghcr.io/drimh4x/moonshinev2-stt` with tags:
+- `main` — latest from main branch
+- `1.0.0` — semver version
+- `1.0` — major.minor
+- `sha-xxxxxxx` — commit SHA
 
 ## License
 
