@@ -4,9 +4,11 @@ import logging
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.health import router as health_router
 from app.api.stream import router as stream_router
@@ -19,6 +21,32 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+_is_internal_health_check: ContextVar[bool] = ContextVar("_is_internal_health_check", default=False)
+
+
+class HealthCheckFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if _is_internal_health_check.get():
+            return False
+        return True
+
+
+uvicorn_logger = logging.getLogger("uvicorn.access")
+uvicorn_logger.addFilter(HealthCheckFilter())
+
+
+class InternalHealthCheckMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path == "/health" and request.headers.get("X-Health-Check") == "internal":
+            token = _is_internal_health_check.set(True)
+            try:
+                response = await call_next(request)
+                return response
+            finally:
+                _is_internal_health_check.reset(token)
+        return await call_next(request)
 
 
 @asynccontextmanager
@@ -54,6 +82,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(InternalHealthCheckMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
